@@ -141,7 +141,10 @@ class TelemetryCollector:
         payload_time = payload.get("Time")
         if isinstance(payload_time, str):
             try:
-                return datetime.fromisoformat(payload_time)
+                parsed = datetime.fromisoformat(payload_time)
+                if parsed.tzinfo is None:
+                    return parsed.replace(tzinfo=self._settings.timezone)
+                return parsed
             except ValueError:
                 LOGGER.debug("telemetry payload time was not ISO formatted: %s", payload_time)
         return self._now_provider()

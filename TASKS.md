@@ -107,7 +107,7 @@ Status legend:
   - Active use after 20:00 postpones decision loop without command spam.
 
 ### P2-05 Hard cutoff enforcement at 01:00
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Enforce latest cutoff regardless of activity.
   - Persist and log explicit marker when fallback is used.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 2 telemetry collection, activity classification, quiet-window gating, and postponed re-check scheduling are implemented; hard cutoff remains pending.
+  - Phase 2 telemetry collection, activity classification, quiet-window gating, postponed re-check scheduling, and hard cutoff enforcement are implemented; decision inspection remains pending.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

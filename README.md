@@ -74,3 +74,4 @@ The activity classifier uses:
 It also reports the current activity assessment as `ACTIVE`, `IDLE`, `UNCERTAIN`, `NO_DATA`, or `STALE`.
 It reports whether the quiet window is already satisfied for an automatic shutdown decision.
 When shutdown is postponed, the status payload includes `next_postponed_evaluation`.
+The status payload also includes `next_hard_cutoff` for the mandatory fallback shutdown.

@@ -25,6 +25,7 @@ class ActivityClassifierTests(unittest.TestCase):
             active_watts_threshold=45.0,
             idle_watts_threshold=20.0,
             quiet_minutes_required=20,
+            postpone_minutes=30,
             telemetry_stale_seconds=900,
             mqtt_host="127.0.0.1",
             mqtt_port=1883,
@@ -76,6 +77,15 @@ class ActivityClassifierTests(unittest.TestCase):
         )
         self.assertEqual(result.state, "STALE")
         self.assertEqual(result.reason, "TELEMETRY_TOO_OLD")
+
+    def test_normalizes_naive_sample_times(self) -> None:
+        naive_sample_time = datetime(2026, 4, 14, 19, 59, 30)
+        result = self.classifier.assess_latest(
+            Sample(created_at=naive_sample_time, power_watts=20.0),
+            now=self.now,
+        )
+        self.assertEqual(result.state, "IDLE")
+        self.assertEqual(result.sample_time, "2026-04-14T19:59:30+02:00")
 
     def test_quiet_window_allows_off_after_continuous_idle(self) -> None:
         result = self.classifier.assess_quiet_window(

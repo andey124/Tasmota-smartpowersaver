@@ -16,6 +16,7 @@ from .telemetry import TelemetryCollector
 
 LOGGER = logging.getLogger(__name__)
 POSTPONED_EVALUATION_JOB_ID = "postponed_auto_off_evaluation"
+HARD_CUTOFF_JOB_ID = "daily_hard_cutoff"
 
 
 @dataclass
@@ -50,6 +51,7 @@ class GuardianService:
     def _register_jobs(self) -> None:
         auto_off = self.settings.auto_off_time
         reset = self.settings.reset_time
+        hard_cutoff = self.settings.hard_cutoff_time
 
         self.scheduler.add_job(
             self.evaluate_and_maybe_turn_off,
@@ -63,6 +65,12 @@ class GuardianService:
             id="daily_override_reset",
             replace_existing=True,
         )
+        self.scheduler.add_job(
+            self.enforce_hard_cutoff,
+            trigger=CronTrigger(hour=hard_cutoff.hour, minute=hard_cutoff.minute),
+            id=HARD_CUTOFF_JOB_ID,
+            replace_existing=True,
+        )
 
     def _get_job_next_run_time(self, job_id: str) -> str | None:
         job = self.scheduler.get_job(job_id) if self.scheduler.running else None
@@ -74,8 +82,28 @@ class GuardianService:
         if self.scheduler.get_job(POSTPONED_EVALUATION_JOB_ID) is not None:
             self.scheduler.remove_job(POSTPONED_EVALUATION_JOB_ID)
 
+    def _next_hard_cutoff_datetime(self, now: datetime) -> datetime:
+        auto_off_today = now.replace(
+            hour=self.settings.auto_off_time.hour,
+            minute=self.settings.auto_off_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        cutoff = now.replace(
+            hour=self.settings.hard_cutoff_time.hour,
+            minute=self.settings.hard_cutoff_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        reference_time = auto_off_today if now < auto_off_today else now
+        while cutoff <= reference_time:
+            cutoff += timedelta(days=1)
+        return cutoff
+
     def _schedule_postponed_evaluation(self, now: datetime, reason: str, quiet_window: dict) -> tuple[str, str]:
         run_at = now + timedelta(minutes=self.settings.postpone_minutes)
+        hard_cutoff_at = self._next_hard_cutoff_datetime(now)
+
         existing_job = self.scheduler.get_job(POSTPONED_EVALUATION_JOB_ID)
         if existing_job is not None and existing_job.next_run_time is not None:
             existing_run = existing_job.next_run_time
@@ -90,6 +118,20 @@ class GuardianService:
                     },
                 )
                 return existing_run.isoformat(), "reused"
+
+        if run_at >= hard_cutoff_at:
+            self._clear_postponed_evaluation()
+            self.log_event(
+                "POSTPONED_EVALUATION_SKIPPED",
+                {
+                    "reason": reason,
+                    "scheduled_for": hard_cutoff_at.isoformat(),
+                    "postpone_minutes": self.settings.postpone_minutes,
+                    "schedule_action": "hard_cutoff_pending",
+                    "quiet_window": quiet_window,
+                },
+            )
+            return hard_cutoff_at.isoformat(), "hard_cutoff_pending"
 
         self.scheduler.add_job(
             self.evaluate_and_maybe_turn_off,
@@ -131,6 +173,22 @@ class GuardianService:
     def reset_daily_override(self) -> None:
         removed = self.db.clear_all_overrides()
         self.log_event("OVERRIDE_RESET", {"removed_rows": removed})
+
+    def enforce_hard_cutoff(self) -> EvaluationResult:
+        self._clear_postponed_evaluation()
+        actuation = self.actuator.send_power("OFF", reason="HARD_CUTOFF")
+        details = {
+            "mode": actuation.mode,
+            "detail": actuation.detail,
+            "dry_run": self.settings.dry_run,
+        }
+
+        if actuation.success:
+            self.log_event("HARD_CUTOFF_USED", details)
+            return EvaluationResult(action="OFF", reason="HARD_CUTOFF", details=details)
+
+        self.log_event("HARD_CUTOFF_FAILED", details)
+        return EvaluationResult(action="ERROR", reason="HARD_CUTOFF", details=details)
 
     def evaluate_and_maybe_turn_off(self) -> EvaluationResult:
         now = self._now()
@@ -251,10 +309,13 @@ class GuardianService:
     def status(self) -> dict:
         jobs = self.scheduler.get_jobs() if self.scheduler.running else []
         next_auto_off = None
+        next_hard_cutoff = None
         next_postponed_evaluation = None
         for job in jobs:
             if job.id == "daily_auto_off_evaluation" and job.next_run_time is not None:
                 next_auto_off = job.next_run_time.isoformat()
+            if job.id == HARD_CUTOFF_JOB_ID and job.next_run_time is not None:
+                next_hard_cutoff = job.next_run_time.isoformat()
             if job.id == POSTPONED_EVALUATION_JOB_ID and job.next_run_time is not None:
                 next_postponed_evaluation = job.next_run_time.isoformat()
 
@@ -309,6 +370,7 @@ class GuardianService:
             "today": today_key,
             "override_today": self.db.has_override(today_key),
             "next_auto_off": next_auto_off,
+            "next_hard_cutoff": next_hard_cutoff,
             "next_postponed_evaluation": next_postponed_evaluation,
             "recent_events": [
                 {

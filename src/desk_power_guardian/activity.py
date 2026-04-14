@@ -38,6 +38,16 @@ class ActivityClassifier:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
+    def _normalize_now(self, now: datetime) -> datetime:
+        if now.tzinfo is None:
+            return now.replace(tzinfo=self._settings.timezone)
+        return now
+
+    def _normalize_sample_time(self, sample_time: datetime) -> datetime:
+        if sample_time.tzinfo is None:
+            return sample_time.replace(tzinfo=self._settings.timezone)
+        return sample_time
+
     def classify_power(self, power_watts: float) -> str:
         if power_watts >= self._settings.active_watts_threshold:
             return "ACTIVE"
@@ -46,6 +56,7 @@ class ActivityClassifier:
         return "UNCERTAIN"
 
     def assess_latest(self, sample: PowerSampleLike | None, now: datetime) -> ActivityAssessment:
+        now = self._normalize_now(now)
         if sample is None:
             return ActivityAssessment(
                 state="NO_DATA",
@@ -55,14 +66,15 @@ class ActivityClassifier:
                 sample_time=None,
             )
 
-        sample_age_seconds = max((now - sample.created_at).total_seconds(), 0.0)
+        sample_time = self._normalize_sample_time(sample.created_at)
+        sample_age_seconds = max((now - sample_time).total_seconds(), 0.0)
         if sample_age_seconds > self._settings.telemetry_stale_seconds:
             return ActivityAssessment(
                 state="STALE",
                 reason="TELEMETRY_TOO_OLD",
                 power_watts=sample.power_watts,
                 sample_age_seconds=sample_age_seconds,
-                sample_time=sample.created_at.isoformat(),
+                sample_time=sample_time.isoformat(),
             )
 
         state = self.classify_power(sample.power_watts)
@@ -72,7 +84,7 @@ class ActivityClassifier:
                 reason="POWER_AT_OR_ABOVE_ACTIVE_THRESHOLD",
                 power_watts=sample.power_watts,
                 sample_age_seconds=sample_age_seconds,
-                sample_time=sample.created_at.isoformat(),
+                sample_time=sample_time.isoformat(),
             )
 
         if state == "IDLE":
@@ -81,7 +93,7 @@ class ActivityClassifier:
                 reason="POWER_AT_OR_BELOW_IDLE_THRESHOLD",
                 power_watts=sample.power_watts,
                 sample_age_seconds=sample_age_seconds,
-                sample_time=sample.created_at.isoformat(),
+                sample_time=sample_time.isoformat(),
             )
 
         return ActivityAssessment(
@@ -89,10 +101,11 @@ class ActivityClassifier:
             reason="POWER_BETWEEN_IDLE_AND_ACTIVE_THRESHOLDS",
             power_watts=sample.power_watts,
             sample_age_seconds=sample_age_seconds,
-            sample_time=sample.created_at.isoformat(),
+            sample_time=sample_time.isoformat(),
         )
 
     def assess_quiet_window(self, samples: list[PowerSampleLike], now: datetime) -> QuietWindowAssessment:
+        now = self._normalize_now(now)
         required_seconds = float(self._settings.quiet_minutes_required * 60)
         if not samples:
             return QuietWindowAssessment(
@@ -107,7 +120,7 @@ class ActivityClassifier:
                 considered_samples=0,
             )
 
-        ordered_samples = sorted(samples, key=lambda sample: sample.created_at)
+        ordered_samples = sorted(samples, key=lambda sample: self._normalize_sample_time(sample.created_at))
         latest_sample = ordered_samples[-1]
         latest_assessment = self.assess_latest(latest_sample, now=now)
         if latest_assessment.state != "IDLE":
@@ -123,12 +136,13 @@ class ActivityClassifier:
                 considered_samples=1,
             )
 
-        idle_since = latest_sample.created_at
+        idle_since = self._normalize_sample_time(latest_sample.created_at)
         considered_samples = 1
-        next_sample_time = latest_sample.created_at
+        next_sample_time = idle_since
 
         for sample in reversed(ordered_samples[:-1]):
-            gap_seconds = (next_sample_time - sample.created_at).total_seconds()
+            sample_time = self._normalize_sample_time(sample.created_at)
+            gap_seconds = (next_sample_time - sample_time).total_seconds()
             if gap_seconds > self._settings.telemetry_stale_seconds:
                 break
 
@@ -136,8 +150,8 @@ class ActivityClassifier:
             if sample_state != "IDLE":
                 break
 
-            idle_since = sample.created_at
-            next_sample_time = sample.created_at
+            idle_since = sample_time
+            next_sample_time = sample_time
             considered_samples += 1
 
         quiet_for_seconds = max((now - idle_since).total_seconds(), 0.0)
