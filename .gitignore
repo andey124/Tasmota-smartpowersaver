@@ -1,6 +1,8 @@
 ﻿.env
+.vscode/
 artifacts/
 *.csv
+data/*.db
 __pycache__/
 .pytest_cache/
 .venv/

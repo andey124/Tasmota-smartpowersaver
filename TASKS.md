@@ -23,7 +23,7 @@ Status legend:
 - Scope:
   - Add `Dockerfile` and `.dockerignore`.
   - Add `docker-compose.yml` service with persistent volume for SQLite and restart policy.
-  - Support local `.env` configuration injection.
+  - Support local `.env` configuration injection and configurable host port mapping.
 - Deliverable:
   - `docker compose up -d` starts container successfully.
   - Container restarts automatically (`unless-stopped`).
@@ -211,9 +211,9 @@ Status legend:
 ## Cross-Phase Tracking
 
 ### Current milestone
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Deliverable:
-  - Planning and task decomposition complete (this file + concept spec aligned).
+  - Phase 1 MVP implemented and validated, including Docker deployment on configurable host port.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

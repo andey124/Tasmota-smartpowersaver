@@ -28,8 +28,16 @@ curl http://localhost:8080/health
 ```
 
 ## Docker
+Set `SERVICE_PORT` in `.env` to choose the host port that forwards to the container's internal port `8080`.
+
 ```bash
 docker compose up -d --build
+```
+
+Example health check with `SERVICE_PORT=1884`:
+
+```bash
+curl http://localhost:1884/health
 ```
 
 ## Important MQTT Config
