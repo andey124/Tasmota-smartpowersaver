@@ -202,7 +202,7 @@ Status legend:
   - CI/local test run validates no regression in decision flow.
 
 ### P3-05 Ops dashboard starter
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Provide optional Grafana dashboard JSON (events and power trend).
 - Deliverable:
@@ -211,9 +211,9 @@ Status legend:
 ## Cross-Phase Tracking
 
 ### Current milestone
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Deliverable:
-  - Phase 3 hardening includes startup reconciliation, notifications, metrics, and service-level integration coverage.
+  - Phase 3 hardening is implemented with reconciliation, notifications, metrics, tests, and a Grafana dashboard starter.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

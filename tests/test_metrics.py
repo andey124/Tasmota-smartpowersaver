@@ -59,6 +59,7 @@ class MetricsRenderingTests(unittest.TestCase):
         self.assertIn("desk_power_guardian_postpones_total 1", metrics)
         self.assertIn("desk_power_guardian_offs_total 2", metrics)
         self.assertIn("desk_power_guardian_override_active 0", metrics)
+        self.assertIn("desk_power_guardian_latest_power_watts NaN", metrics)
 
         db.close()
 

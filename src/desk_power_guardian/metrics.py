@@ -30,5 +30,11 @@ def render_metrics(service: GuardianService) -> str:
         "# HELP desk_power_guardian_postponed_pending Whether a postponed evaluation is currently scheduled.",
         "# TYPE desk_power_guardian_postponed_pending gauge",
         f"desk_power_guardian_postponed_pending {1 if decision['schedule']['next_postponed_evaluation'] else 0}",
+        "# HELP desk_power_guardian_latest_power_watts Latest observed telemetry power in watts.",
+        "# TYPE desk_power_guardian_latest_power_watts gauge",
+        f"desk_power_guardian_latest_power_watts {decision['activity']['power_watts'] if decision['activity']['power_watts'] is not None else 'NaN'}",
+        "# HELP desk_power_guardian_activity_state Current activity state encoded as a labeled gauge.",
+        "# TYPE desk_power_guardian_activity_state gauge",
+        f"desk_power_guardian_activity_state{{state=\"{decision['activity']['state']}\"}} 1",
     ]
     return "\n".join(metrics) + "\n"

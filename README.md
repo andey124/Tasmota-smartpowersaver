@@ -82,6 +82,8 @@ The status payload also includes `next_hard_cutoff` for the mandatory fallback s
 
 `GET /metrics` exposes Prometheus-style counters for evaluations, postpones, and automated shutdowns, plus gauges for override and postponed state.
 
+A starter Grafana dashboard is available at `docs/grafana-dashboard.json` and assumes Prometheus is scraping `/metrics`.
+
 Postponed re-checks are now persisted in SQLite and restored on startup, so a container restart does not silently drop a pending evening evaluation.
 
 Optional pre-shutdown notifications are available through `NOTIFICATION_WEBHOOK_URL`. When configured, automated `OFF` paths send a JSON webhook before actuation with the reason, cutoff context, command topic, and the configured `PRE_SHUTDOWN_NOTIFY_DELAY_SECONDS`.
