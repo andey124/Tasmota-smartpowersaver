@@ -17,6 +17,8 @@ from .telemetry import TelemetryCollector
 LOGGER = logging.getLogger(__name__)
 POSTPONED_EVALUATION_JOB_ID = "postponed_auto_off_evaluation"
 HARD_CUTOFF_JOB_ID = "daily_hard_cutoff"
+POSTPONED_EVALUATION_STATE_KEY = "postponed_evaluation"
+RECONCILIATION_GRACE_SECONDS = 5
 
 
 @dataclass
@@ -38,6 +40,7 @@ class GuardianService:
     def start(self) -> None:
         self.db.init_schema()
         self._register_jobs()
+        self._reconcile_startup_state()
         self.telemetry.start()
         self.scheduler.start()
         self.log_event("SERVICE_STARTED", {"dry_run": self.settings.dry_run})
@@ -81,6 +84,74 @@ class GuardianService:
     def _clear_postponed_evaluation(self) -> None:
         if self.scheduler.get_job(POSTPONED_EVALUATION_JOB_ID) is not None:
             self.scheduler.remove_job(POSTPONED_EVALUATION_JOB_ID)
+        self.db.clear_service_state(POSTPONED_EVALUATION_STATE_KEY)
+
+    def _persist_postponed_evaluation(
+        self,
+        run_at: datetime,
+        hard_cutoff_at: datetime,
+        reason: str,
+        quiet_window: dict,
+    ) -> None:
+        self.db.set_service_state(
+            POSTPONED_EVALUATION_STATE_KEY,
+            {
+                "scheduled_for": run_at.isoformat(),
+                "hard_cutoff_at": hard_cutoff_at.isoformat(),
+                "reason": reason,
+                "quiet_window": quiet_window,
+            },
+            updated_at_iso=self._now().isoformat(),
+        )
+
+    def _reconcile_startup_state(self) -> None:
+        pending = self.db.get_service_state(POSTPONED_EVALUATION_STATE_KEY)
+        if pending is None:
+            return
+
+        scheduled_for = datetime.fromisoformat(pending["scheduled_for"])
+        hard_cutoff_at = datetime.fromisoformat(pending["hard_cutoff_at"])
+        now = self._now()
+
+        if now >= hard_cutoff_at:
+            self.db.clear_service_state(POSTPONED_EVALUATION_STATE_KEY)
+            self.log_event(
+                "STARTUP_RECONCILIATION_CLEARED",
+                {
+                    "reason": "POSTPONED_EVALUATION_EXPIRED",
+                    "scheduled_for": scheduled_for.isoformat(),
+                    "hard_cutoff_at": hard_cutoff_at.isoformat(),
+                },
+            )
+            return
+
+        run_at = scheduled_for
+        schedule_action = "restored"
+        if scheduled_for <= now:
+            run_at = min(now + timedelta(seconds=RECONCILIATION_GRACE_SECONDS), hard_cutoff_at)
+            schedule_action = "rescheduled_immediate"
+
+        self.scheduler.add_job(
+            self.evaluate_and_maybe_turn_off,
+            trigger=DateTrigger(run_date=run_at),
+            id=POSTPONED_EVALUATION_JOB_ID,
+            replace_existing=True,
+        )
+        self._persist_postponed_evaluation(
+            run_at=run_at,
+            hard_cutoff_at=hard_cutoff_at,
+            reason=pending.get("reason", "RECONCILED"),
+            quiet_window=pending.get("quiet_window", {}),
+        )
+        self.log_event(
+            "STARTUP_RECONCILIATION_RESTORED",
+            {
+                "schedule_action": schedule_action,
+                "scheduled_for": run_at.isoformat(),
+                "original_scheduled_for": scheduled_for.isoformat(),
+                "hard_cutoff_at": hard_cutoff_at.isoformat(),
+            },
+        )
 
     def _next_hard_cutoff_datetime(self, now: datetime) -> datetime:
         auto_off_today = now.replace(
@@ -138,6 +209,12 @@ class GuardianService:
             trigger=DateTrigger(run_date=run_at),
             id=POSTPONED_EVALUATION_JOB_ID,
             replace_existing=True,
+        )
+        self._persist_postponed_evaluation(
+            run_at=run_at,
+            hard_cutoff_at=hard_cutoff_at,
+            reason=reason,
+            quiet_window=quiet_window,
         )
         self.log_event(
             "POSTPONED_EVALUATION_SCHEDULED",

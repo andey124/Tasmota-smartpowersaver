@@ -59,6 +59,12 @@ class Database:
                     power_watts REAL NOT NULL,
                     payload_json TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS service_state (
+                    key TEXT PRIMARY KEY,
+                    value_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             self._conn.commit()
@@ -177,3 +183,32 @@ class Database:
                 )
             )
         return result
+
+    def set_service_state(self, key: str, value: dict, updated_at_iso: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                """
+                INSERT INTO service_state (key, value_json, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key)
+                DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
+                """,
+                (key, json.dumps(value, separators=(",", ":")), updated_at_iso),
+            )
+            self._conn.commit()
+
+    def get_service_state(self, key: str) -> dict | None:
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT value_json FROM service_state WHERE key = ?",
+                (key,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return json.loads(row["value_json"])
+
+    def clear_service_state(self, key: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM service_state WHERE key = ?", (key,))
+            self._conn.commit()

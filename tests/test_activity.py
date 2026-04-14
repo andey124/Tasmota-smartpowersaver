@@ -34,6 +34,7 @@ class ActivityClassifierTests(unittest.TestCase):
             mqtt_password=None,
             tasmota_base_topic="tasmota_1C8D21",
             tasmota_command_prefix="cmnd",
+            tasmota_status_prefix="stat",
             telemetry_topic_prefix="tele",
             telemetry_sensor_suffix="SENSOR",
             telemetry_window_size=120,

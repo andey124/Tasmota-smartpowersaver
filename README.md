@@ -78,3 +78,5 @@ When shutdown is postponed, the status payload includes `next_postponed_evaluati
 The status payload also includes `next_hard_cutoff` for the mandatory fallback shutdown.
 
 `GET /decision` returns the current thresholds, schedule, recent samples, activity state, quiet-window state, and the latest persisted decision event so you can see why shutdown was allowed or skipped.
+
+Postponed re-checks are now persisted in SQLite and restored on startup, so a container restart does not silently drop a pending evening evaluation.

@@ -170,7 +170,7 @@ Status legend:
 ## Phase 3 - Hardening and Operational Quality
 
 ### P3-01 Startup reconciliation
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Recover pending state/jobs after restart.
   - Rebuild scheduler state from DB and current time.
@@ -211,9 +211,9 @@ Status legend:
 ## Cross-Phase Tracking
 
 ### Current milestone
-- Status: `DONE`
+- Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 2 activity-aware shutdown engine and Phase 2a operator scripts are implemented.
+  - Phase 3 hardening started with durable startup reconciliation for pending postponed jobs.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`
