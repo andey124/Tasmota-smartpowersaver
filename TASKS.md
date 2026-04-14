@@ -194,7 +194,7 @@ Status legend:
   - Metrics scraped by Prometheus in homelab.
 
 ### P3-04 Integration tests with mocked MQTT/Tasmota I/O
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Build integration tests for override, postpone, cutoff, and dry-run safety.
   - Mock telemetry input and command output.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 3 hardening includes startup reconciliation, pre-shutdown webhook notification, and Prometheus metrics exposure.
+  - Phase 3 hardening includes startup reconciliation, notifications, metrics, and service-level integration coverage.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`
