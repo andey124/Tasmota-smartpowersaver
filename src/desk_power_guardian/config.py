@@ -52,6 +52,10 @@ class Settings:
     mqtt_password: str | None
     tasmota_base_topic: str
     tasmota_command_prefix: str
+    telemetry_topic_prefix: str
+    telemetry_sensor_suffix: str
+    telemetry_window_size: int
+    telemetry_db_retention: int
     http_fallback_url: str | None
     sqlite_path: str
 
@@ -62,6 +66,10 @@ class Settings:
     @property
     def command_topic(self) -> str:
         return f"{self.tasmota_command_prefix}/{self.tasmota_base_topic}/POWER"
+
+    @property
+    def telemetry_topic(self) -> str:
+        return f"{self.telemetry_topic_prefix}/{self.tasmota_base_topic}/{self.telemetry_sensor_suffix}"
 
 
 def load_settings() -> Settings:
@@ -77,6 +85,10 @@ def load_settings() -> Settings:
     mqtt_password = _env("MQTT_PASSWORD")
     tasmota_base_topic = _env("TASMOTA_BASE_TOPIC", "tasmota_1C8D21") or "tasmota_1C8D21"
     tasmota_command_prefix = _env("TASMOTA_COMMAND_PREFIX", "cmnd") or "cmnd"
+    telemetry_topic_prefix = _env("TELEMETRY_TOPIC_PREFIX", "tele") or "tele"
+    telemetry_sensor_suffix = _env("TELEMETRY_SENSOR_SUFFIX", "SENSOR") or "SENSOR"
+    telemetry_window_size = int(_env("TELEMETRY_WINDOW_SIZE", "120") or "120")
+    telemetry_db_retention = int(_env("TELEMETRY_DB_RETENTION", "500") or "500")
     http_fallback_url = _env("HTTP_FALLBACK_URL")
     sqlite_path = _env("SQLITE_PATH", "data/desk_power_guardian.db") or "data/desk_power_guardian.db"
 
@@ -93,6 +105,10 @@ def load_settings() -> Settings:
         mqtt_password=mqtt_password,
         tasmota_base_topic=tasmota_base_topic,
         tasmota_command_prefix=tasmota_command_prefix,
+        telemetry_topic_prefix=telemetry_topic_prefix,
+        telemetry_sensor_suffix=telemetry_sensor_suffix,
+        telemetry_window_size=telemetry_window_size,
+        telemetry_db_retention=telemetry_db_retention,
         http_fallback_url=http_fallback_url,
         sqlite_path=sqlite_path,
     )

@@ -10,6 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from .actuator import TasmotaActuator
 from .config import Settings
 from .db import Database
+from .telemetry import TelemetryCollector
 
 LOGGER = logging.getLogger(__name__)
 
@@ -26,15 +27,18 @@ class GuardianService:
         self.settings = settings
         self.db = db
         self.actuator = TasmotaActuator(settings)
+        self.telemetry = TelemetryCollector(settings=settings, db=db, now_provider=self._now)
         self.scheduler = AsyncIOScheduler(timezone=settings.timezone)
 
     def start(self) -> None:
         self.db.init_schema()
         self._register_jobs()
+        self.telemetry.start()
         self.scheduler.start()
         self.log_event("SERVICE_STARTED", {"dry_run": self.settings.dry_run})
 
     def stop(self) -> None:
+        self.telemetry.stop()
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
         self.log_event("SERVICE_STOPPED", {})
@@ -153,6 +157,18 @@ class GuardianService:
                 "port": self.settings.mqtt_port,
                 "allow_anonymous": self.settings.mqtt_allow_anonymous,
                 "command_topic": self.settings.command_topic,
+                "telemetry_topic": self.settings.telemetry_topic,
+            },
+            "telemetry": {
+                **self.telemetry.status(),
+                "recent_samples": [
+                    {
+                        "created_at": sample.created_at.isoformat(),
+                        "topic": sample.topic,
+                        "power_watts": sample.power_watts,
+                    }
+                    for sample in self.telemetry.recent_samples(limit=10)
+                ],
             },
             "today": today_key,
             "override_today": self.db.has_override(today_key),

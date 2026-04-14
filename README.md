@@ -47,6 +47,13 @@ For your plug, the relevant command path is expected to look like:
 Example:
 - `cmnd/tasmota_1C8D21/POWER`
 
+The telemetry collector subscribes to:
+- `tele/<TASMOTA_BASE_TOPIC>/SENSOR`
+
+You can tune retention with:
+- `TELEMETRY_WINDOW_SIZE` for the in-memory rolling window
+- `TELEMETRY_DB_RETENTION` for recent SQLite-backed samples (`0` disables DB retention)
+
 ## API
 - `GET /health`
 - `GET /status`
@@ -55,3 +62,5 @@ Example:
 - `POST /power/on`
 - `POST /power/off-now`
 - `POST /evaluate-now`
+
+`GET /status` now includes recent power telemetry samples when available.

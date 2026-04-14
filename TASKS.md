@@ -75,7 +75,7 @@ Status legend:
 ## Phase 2 - Activity-aware Shutdown Engine
 
 ### P2-01 Telemetry collector and rolling storage
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Subscribe to telemetry and parse `ENERGY.Power` samples.
   - Keep rolling in-memory window and optional recent SQLite rows.
@@ -211,9 +211,9 @@ Status legend:
 ## Cross-Phase Tracking
 
 ### Current milestone
-- Status: `DONE`
+- Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 1 MVP implemented and validated, including Docker deployment on configurable host port.
+  - Phase 2 telemetry collection checkpoint implemented; classifier and quiet-window logic remain pending.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`
