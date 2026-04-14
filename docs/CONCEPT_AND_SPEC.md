@@ -167,8 +167,8 @@ Table: `events`
 - `POSTPONE_MINUTES=30`
 - `MQTT_HOST`
 - `MQTT_PORT`
-- `MQTT_USERNAME`
-- `MQTT_PASSWORD`
+- `MQTT_USERNAME` (optional when broker allows anonymous)
+- `MQTT_PASSWORD` (optional when broker allows anonymous)
 - `TASMOTA_TOPIC`
 - `HTTP_FALLBACK_URL` (optional)
 
@@ -232,7 +232,8 @@ Table: `events`
 
 ## 13) Confirmed Inputs (From Your Answers)
 1. MQTT broker exists (Mosquitto in Docker) and will be used as primary integration.
-2. Hard latest cutoff is required at `01:00`, with explicit indication when this fallback is used.
-3. Power ranges are not yet known; they will be determined from recorded telemetry.
-4. Manual trigger path will be HTTP requests (bookmark/home landing page integration).
-5. Scope is single plug (`office`) for v1.
+2. MQTT broker currently allows anonymous clients (`allow_anonymous true`).
+3. Hard latest cutoff is required at `01:00`, with explicit indication when this fallback is used.
+4. Power ranges are not yet known; they will be determined from recorded telemetry.
+5. Manual trigger path will be HTTP requests (bookmark/home landing page integration).
+6. Scope is single plug (`office`) for v1.
