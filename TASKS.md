@@ -99,7 +99,7 @@ Status legend:
   - Decision engine returns `OFF_ALLOWED` only after continuous quiet window.
 
 ### P2-04 Postpone and re-evaluate flow
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - If active at decision time, schedule next check after `POSTPONE_MINUTES`.
   - Prevent duplicate postponed jobs.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 2 telemetry collection, activity classification, and quiet-window gating are implemented; postpone logic remains pending.
+  - Phase 2 telemetry collection, activity classification, quiet-window gating, and postponed re-check scheduling are implemented; hard cutoff remains pending.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

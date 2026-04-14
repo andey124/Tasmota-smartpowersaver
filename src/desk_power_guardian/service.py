@@ -2,9 +2,10 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 
 from .actuator import TasmotaActuator
@@ -14,6 +15,7 @@ from .db import Database
 from .telemetry import TelemetryCollector
 
 LOGGER = logging.getLogger(__name__)
+POSTPONED_EVALUATION_JOB_ID = "postponed_auto_off_evaluation"
 
 
 @dataclass
@@ -61,6 +63,50 @@ class GuardianService:
             id="daily_override_reset",
             replace_existing=True,
         )
+
+    def _get_job_next_run_time(self, job_id: str) -> str | None:
+        job = self.scheduler.get_job(job_id) if self.scheduler.running else None
+        if job is None or job.next_run_time is None:
+            return None
+        return job.next_run_time.isoformat()
+
+    def _clear_postponed_evaluation(self) -> None:
+        if self.scheduler.get_job(POSTPONED_EVALUATION_JOB_ID) is not None:
+            self.scheduler.remove_job(POSTPONED_EVALUATION_JOB_ID)
+
+    def _schedule_postponed_evaluation(self, now: datetime, reason: str, quiet_window: dict) -> tuple[str, str]:
+        run_at = now + timedelta(minutes=self.settings.postpone_minutes)
+        existing_job = self.scheduler.get_job(POSTPONED_EVALUATION_JOB_ID)
+        if existing_job is not None and existing_job.next_run_time is not None:
+            existing_run = existing_job.next_run_time
+            if existing_run <= run_at:
+                self.log_event(
+                    "POSTPONED_EVALUATION_REUSED",
+                    {
+                        "reason": reason,
+                        "scheduled_for": existing_run.isoformat(),
+                        "postpone_minutes": self.settings.postpone_minutes,
+                        "quiet_window": quiet_window,
+                    },
+                )
+                return existing_run.isoformat(), "reused"
+
+        self.scheduler.add_job(
+            self.evaluate_and_maybe_turn_off,
+            trigger=DateTrigger(run_date=run_at),
+            id=POSTPONED_EVALUATION_JOB_ID,
+            replace_existing=True,
+        )
+        self.log_event(
+            "POSTPONED_EVALUATION_SCHEDULED",
+            {
+                "reason": reason,
+                "scheduled_for": run_at.isoformat(),
+                "postpone_minutes": self.settings.postpone_minutes,
+                "quiet_window": quiet_window,
+            },
+        )
+        return run_at.isoformat(), "scheduled"
 
     def _now(self) -> datetime:
         return datetime.now(self.settings.timezone)
@@ -114,6 +160,7 @@ class GuardianService:
         )
 
         if self.db.has_override(date_local):
+            self._clear_postponed_evaluation()
             result = EvaluationResult(
                 action="SKIP",
                 reason="OVERRIDE_ACTIVE",
@@ -123,18 +170,26 @@ class GuardianService:
             return result
 
         if not quiet_window.off_allowed:
+            quiet_window_details = {
+                "reason": quiet_window.reason,
+                "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                "latest_state": quiet_window.latest_state,
+                "latest_power_watts": quiet_window.latest_power_watts,
+                "latest_sample_time": quiet_window.latest_sample_time,
+                "idle_since": quiet_window.idle_since,
+                "considered_samples": quiet_window.considered_samples,
+            }
+            postponed_for, schedule_action = self._schedule_postponed_evaluation(
+                now=now,
+                reason=quiet_window.reason,
+                quiet_window=quiet_window_details,
+            )
             details = {
                 "date_local": date_local,
-                "quiet_window": {
-                    "reason": quiet_window.reason,
-                    "quiet_for_seconds": quiet_window.quiet_for_seconds,
-                    "quiet_minutes_required": quiet_window.quiet_minutes_required,
-                    "latest_state": quiet_window.latest_state,
-                    "latest_power_watts": quiet_window.latest_power_watts,
-                    "latest_sample_time": quiet_window.latest_sample_time,
-                    "idle_since": quiet_window.idle_since,
-                    "considered_samples": quiet_window.considered_samples,
-                },
+                "quiet_window": quiet_window_details,
+                "postponed_for": postponed_for,
+                "schedule_action": schedule_action,
             }
             self.log_event("OFF_SKIPPED", details)
             return EvaluationResult(
@@ -143,6 +198,7 @@ class GuardianService:
                 details=details,
             )
 
+        self._clear_postponed_evaluation()
         actuation = self.actuator.send_power("OFF", reason="SCHEDULED_AUTO_OFF")
         event_type = "OFF_TRIGGERED" if actuation.success else "OFF_FAILED"
         details = {
@@ -195,9 +251,12 @@ class GuardianService:
     def status(self) -> dict:
         jobs = self.scheduler.get_jobs() if self.scheduler.running else []
         next_auto_off = None
+        next_postponed_evaluation = None
         for job in jobs:
             if job.id == "daily_auto_off_evaluation" and job.next_run_time is not None:
                 next_auto_off = job.next_run_time.isoformat()
+            if job.id == POSTPONED_EVALUATION_JOB_ID and job.next_run_time is not None:
+                next_postponed_evaluation = job.next_run_time.isoformat()
 
         today_key = self._today_key()
         events = self.db.list_recent_events(limit=10)
@@ -250,6 +309,7 @@ class GuardianService:
             "today": today_key,
             "override_today": self.db.has_override(today_key),
             "next_auto_off": next_auto_off,
+            "next_postponed_evaluation": next_postponed_evaluation,
             "recent_events": [
                 {
                     "event_type": event.event_type,

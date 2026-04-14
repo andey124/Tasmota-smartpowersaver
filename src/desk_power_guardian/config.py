@@ -48,6 +48,7 @@ class Settings:
     active_watts_threshold: float
     idle_watts_threshold: float
     quiet_minutes_required: int
+    postpone_minutes: int
     telemetry_stale_seconds: int
     mqtt_host: str
     mqtt_port: int
@@ -85,6 +86,7 @@ def load_settings() -> Settings:
     active_watts_threshold = float(_env("ACTIVE_WATTS_THRESHOLD", "45") or "45")
     idle_watts_threshold = float(_env("IDLE_WATTS_THRESHOLD", "20") or "20")
     quiet_minutes_required = int(_env("QUIET_MINUTES_REQUIRED", "20") or "20")
+    postpone_minutes = int(_env("POSTPONE_MINUTES", "30") or "30")
     telemetry_stale_seconds = int(_env("TELEMETRY_STALE_SECONDS", "900") or "900")
     mqtt_host = _env("MQTT_HOST", "127.0.0.1") or "127.0.0.1"
     mqtt_port = int(_env("MQTT_PORT", "1883") or "1883")
@@ -112,6 +114,7 @@ def load_settings() -> Settings:
         active_watts_threshold=active_watts_threshold,
         idle_watts_threshold=idle_watts_threshold,
         quiet_minutes_required=quiet_minutes_required,
+        postpone_minutes=postpone_minutes,
         telemetry_stale_seconds=telemetry_stale_seconds,
         mqtt_host=mqtt_host,
         mqtt_port=mqtt_port,

@@ -58,6 +58,7 @@ The activity classifier uses:
 - `ACTIVE_WATTS_THRESHOLD` to mark usage as active
 - `IDLE_WATTS_THRESHOLD` to mark usage as idle
 - `QUIET_MINUTES_REQUIRED` to require a continuous idle window before auto-off
+- `POSTPONE_MINUTES` to schedule the next re-check when shutdown is blocked
 - `TELEMETRY_STALE_SECONDS` to treat delayed telemetry as unusable
 
 ## API
@@ -72,3 +73,4 @@ The activity classifier uses:
 `GET /status` now includes recent power telemetry samples when available.
 It also reports the current activity assessment as `ACTIVE`, `IDLE`, `UNCERTAIN`, `NO_DATA`, or `STALE`.
 It reports whether the quiet window is already satisfied for an automatic shutdown decision.
+When shutdown is postponed, the status payload includes `next_postponed_evaluation`.
