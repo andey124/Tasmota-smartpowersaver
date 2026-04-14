@@ -49,6 +49,11 @@ def status() -> dict:
     return service.status()
 
 
+@app.get("/decision")
+def decision() -> dict:
+    return service.decision_context()
+
+
 @app.post("/override/today")
 def set_override_today() -> dict:
     service.set_override_for_today()

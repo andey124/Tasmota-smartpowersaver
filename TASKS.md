@@ -115,7 +115,7 @@ Status legend:
   - Event `HARD_CUTOFF_USED` recorded when shutdown occurs at cutoff.
 
 ### P2-06 Decision inspection endpoint
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add endpoint showing last decision input context (samples, thresholds, reason).
 - Deliverable:
@@ -211,9 +211,9 @@ Status legend:
 ## Cross-Phase Tracking
 
 ### Current milestone
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Deliverable:
-  - Phase 2 telemetry collection, activity classification, quiet-window gating, postponed re-check scheduling, and hard cutoff enforcement are implemented; decision inspection remains pending.
+  - Phase 2 activity-aware shutdown engine is implemented and exposed through inspection APIs.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

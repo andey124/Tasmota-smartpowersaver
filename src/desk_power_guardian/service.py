@@ -306,7 +306,7 @@ class GuardianService:
             details={"mode": actuation.mode, "detail": actuation.detail},
         )
 
-    def status(self) -> dict:
+    def decision_context(self) -> dict:
         jobs = self.scheduler.get_jobs() if self.scheduler.running else []
         next_auto_off = None
         next_hard_cutoff = None
@@ -319,13 +319,81 @@ class GuardianService:
             if job.id == POSTPONED_EVALUATION_JOB_ID and job.next_run_time is not None:
                 next_postponed_evaluation = job.next_run_time.isoformat()
 
-        today_key = self._today_key()
-        events = self.db.list_recent_events(limit=10)
         now = self._now()
         telemetry_window = self.telemetry.recent_samples(limit=self.settings.telemetry_window_size)
-        recent_samples = telemetry_window[-10:]
+        display_samples = telemetry_window[-10:]
         activity = self.activity.assess_latest(self.telemetry.latest_sample(), now=now)
         quiet_window = self.activity.assess_quiet_window(telemetry_window, now=now)
+        recent_events = self.db.list_recent_events(limit=20)
+
+        last_decision_event = None
+        for event in recent_events:
+            if event.event_type in {
+                "OFF_TRIGGERED",
+                "OFF_FAILED",
+                "OFF_SKIPPED",
+                "OVERRIDE_ACTIVE",
+                "HARD_CUTOFF_USED",
+                "HARD_CUTOFF_FAILED",
+            }:
+                last_decision_event = {
+                    "event_type": event.event_type,
+                    "created_at": event.created_at.isoformat(),
+                    "details": event.details,
+                }
+                break
+
+        return {
+            "evaluated_at": now.isoformat(),
+            "today": now.date().isoformat(),
+            "override_today": self.db.has_override(now.date().isoformat()),
+            "thresholds": {
+                "active_watts_threshold": self.settings.active_watts_threshold,
+                "idle_watts_threshold": self.settings.idle_watts_threshold,
+                "quiet_minutes_required": self.settings.quiet_minutes_required,
+                "postpone_minutes": self.settings.postpone_minutes,
+                "telemetry_stale_seconds": self.settings.telemetry_stale_seconds,
+            },
+            "schedule": {
+                "auto_off_time": self.settings.auto_off_time.isoformat(),
+                "hard_cutoff_time": self.settings.hard_cutoff_time.isoformat(),
+                "next_auto_off": next_auto_off,
+                "next_hard_cutoff": next_hard_cutoff,
+                "next_postponed_evaluation": next_postponed_evaluation,
+            },
+            "activity": {
+                "state": activity.state,
+                "reason": activity.reason,
+                "power_watts": activity.power_watts,
+                "sample_age_seconds": activity.sample_age_seconds,
+                "sample_time": activity.sample_time,
+            },
+            "quiet_window": {
+                "off_allowed": quiet_window.off_allowed,
+                "reason": quiet_window.reason,
+                "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                "latest_state": quiet_window.latest_state,
+                "latest_power_watts": quiet_window.latest_power_watts,
+                "latest_sample_time": quiet_window.latest_sample_time,
+                "idle_since": quiet_window.idle_since,
+                "considered_samples": quiet_window.considered_samples,
+            },
+            "recent_samples": [
+                {
+                    "created_at": sample.created_at.isoformat(),
+                    "topic": sample.topic,
+                    "power_watts": sample.power_watts,
+                }
+                for sample in display_samples
+            ],
+            "last_decision_event": last_decision_event,
+        }
+
+    def status(self) -> dict:
+        today_key = self._today_key()
+        events = self.db.list_recent_events(limit=10)
+        decision = self.decision_context()
 
         return {
             "service": "desk-power-guardian",
@@ -340,38 +408,15 @@ class GuardianService:
             },
             "telemetry": {
                 **self.telemetry.status(),
-                "activity": {
-                    "state": activity.state,
-                    "reason": activity.reason,
-                    "power_watts": activity.power_watts,
-                    "sample_age_seconds": activity.sample_age_seconds,
-                    "sample_time": activity.sample_time,
-                },
-                "quiet_window": {
-                    "off_allowed": quiet_window.off_allowed,
-                    "reason": quiet_window.reason,
-                    "quiet_for_seconds": quiet_window.quiet_for_seconds,
-                    "quiet_minutes_required": quiet_window.quiet_minutes_required,
-                    "latest_state": quiet_window.latest_state,
-                    "latest_power_watts": quiet_window.latest_power_watts,
-                    "latest_sample_time": quiet_window.latest_sample_time,
-                    "idle_since": quiet_window.idle_since,
-                    "considered_samples": quiet_window.considered_samples,
-                },
-                "recent_samples": [
-                    {
-                        "created_at": sample.created_at.isoformat(),
-                        "topic": sample.topic,
-                        "power_watts": sample.power_watts,
-                    }
-                    for sample in recent_samples
-                ],
+                "activity": decision["activity"],
+                "quiet_window": decision["quiet_window"],
+                "recent_samples": decision["recent_samples"],
             },
             "today": today_key,
             "override_today": self.db.has_override(today_key),
-            "next_auto_off": next_auto_off,
-            "next_hard_cutoff": next_hard_cutoff,
-            "next_postponed_evaluation": next_postponed_evaluation,
+            "next_auto_off": decision["schedule"]["next_auto_off"],
+            "next_hard_cutoff": decision["schedule"]["next_hard_cutoff"],
+            "next_postponed_evaluation": decision["schedule"]["next_postponed_evaluation"],
             "recent_events": [
                 {
                     "event_type": event.event_type,

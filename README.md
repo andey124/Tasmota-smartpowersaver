@@ -64,6 +64,7 @@ The activity classifier uses:
 ## API
 - `GET /health`
 - `GET /status`
+- `GET /decision`
 - `POST /override/today`
 - `DELETE /override/today`
 - `POST /power/on`
@@ -75,3 +76,5 @@ It also reports the current activity assessment as `ACTIVE`, `IDLE`, `UNCERTAIN`
 It reports whether the quiet window is already satisfied for an automatic shutdown decision.
 When shutdown is postponed, the status payload includes `next_postponed_evaluation`.
 The status payload also includes `next_hard_cutoff` for the mandatory fallback shutdown.
+
+`GET /decision` returns the current thresholds, schedule, recent samples, activity state, quiet-window state, and the latest persisted decision event so you can see why shutdown was allowed or skipped.
