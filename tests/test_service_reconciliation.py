@@ -47,6 +47,9 @@ def build_settings() -> Settings:
         telemetry_window_size=120,
         telemetry_db_retention=500,
         http_fallback_url=None,
+        notification_webhook_url=None,
+        notification_timeout_seconds=5,
+        pre_shutdown_notify_delay_seconds=0,
         sqlite_path=":memory:",
     )
 

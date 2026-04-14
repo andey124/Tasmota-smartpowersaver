@@ -94,6 +94,9 @@ class Settings:
     telemetry_window_size: int
     telemetry_db_retention: int
     http_fallback_url: str | None
+    notification_webhook_url: str | None
+    notification_timeout_seconds: int
+    pre_shutdown_notify_delay_seconds: int
     sqlite_path: str
 
     @property
@@ -141,6 +144,9 @@ def load_settings() -> Settings:
     telemetry_window_size = int(_env("TELEMETRY_WINDOW_SIZE", "120") or "120")
     telemetry_db_retention = int(_env("TELEMETRY_DB_RETENTION", "500") or "500")
     http_fallback_url = _env("HTTP_FALLBACK_URL")
+    notification_webhook_url = _env("NOTIFICATION_WEBHOOK_URL")
+    notification_timeout_seconds = int(_env("NOTIFICATION_TIMEOUT_SECONDS", "5") or "5")
+    pre_shutdown_notify_delay_seconds = int(_env("PRE_SHUTDOWN_NOTIFY_DELAY_SECONDS", "0") or "0")
     sqlite_path = _env("SQLITE_PATH", "data/desk_power_guardian.db") or "data/desk_power_guardian.db"
 
     if idle_watts_threshold > active_watts_threshold:
@@ -170,5 +176,8 @@ def load_settings() -> Settings:
         telemetry_window_size=telemetry_window_size,
         telemetry_db_retention=telemetry_db_retention,
         http_fallback_url=http_fallback_url,
+        notification_webhook_url=notification_webhook_url,
+        notification_timeout_seconds=notification_timeout_seconds,
+        pre_shutdown_notify_delay_seconds=pre_shutdown_notify_delay_seconds,
         sqlite_path=sqlite_path,
     )

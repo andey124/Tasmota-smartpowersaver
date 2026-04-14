@@ -80,3 +80,5 @@ The status payload also includes `next_hard_cutoff` for the mandatory fallback s
 `GET /decision` returns the current thresholds, schedule, recent samples, activity state, quiet-window state, and the latest persisted decision event so you can see why shutdown was allowed or skipped.
 
 Postponed re-checks are now persisted in SQLite and restored on startup, so a container restart does not silently drop a pending evening evaluation.
+
+Optional pre-shutdown notifications are available through `NOTIFICATION_WEBHOOK_URL`. When configured, automated `OFF` paths send a JSON webhook before actuation with the reason, cutoff context, command topic, and the configured `PRE_SHUTDOWN_NOTIFY_DELAY_SECONDS`.

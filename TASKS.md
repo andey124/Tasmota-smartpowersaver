@@ -178,7 +178,7 @@ Status legend:
   - Service restart does not lose override and schedule semantics.
 
 ### P3-02 Pre-shutdown notification hook
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add optional webhook notification before planned OFF.
   - Include reason, cutoff info, and delay.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 3 hardening started with durable startup reconciliation for pending postponed jobs.
+  - Phase 3 hardening includes startup reconciliation and optional pre-shutdown webhook notification.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

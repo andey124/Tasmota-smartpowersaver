@@ -12,6 +12,7 @@ from .actuator import TasmotaActuator
 from .activity import ActivityClassifier
 from .config import Settings
 from .db import Database
+from .notifier import ShutdownNotifier
 from .telemetry import TelemetryCollector
 
 LOGGER = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ class GuardianService:
         self.db = db
         self.actuator = TasmotaActuator(settings)
         self.activity = ActivityClassifier(settings)
+        self.notifier = ShutdownNotifier(settings)
         self.telemetry = TelemetryCollector(settings=settings, db=db, now_provider=self._now)
         self.scheduler = AsyncIOScheduler(timezone=settings.timezone)
 
@@ -253,11 +255,25 @@ class GuardianService:
 
     def enforce_hard_cutoff(self) -> EvaluationResult:
         self._clear_postponed_evaluation()
+        now = self._now()
+        notification = self.notifier.notify_pre_shutdown(
+            now=now,
+            reason="HARD_CUTOFF",
+            hard_cutoff_at=now,
+            dry_run=self.settings.dry_run,
+        )
         actuation = self.actuator.send_power("OFF", reason="HARD_CUTOFF")
         details = {
             "mode": actuation.mode,
             "detail": actuation.detail,
             "dry_run": self.settings.dry_run,
+            "notification": {
+                "attempted": notification.attempted,
+                "success": notification.success,
+                "detail": notification.detail,
+                "delay_seconds": notification.delay_seconds,
+                "planned_shutdown_at": notification.planned_shutdown_at,
+            },
         }
 
         if actuation.success:
@@ -334,12 +350,25 @@ class GuardianService:
             )
 
         self._clear_postponed_evaluation()
+        notification = self.notifier.notify_pre_shutdown(
+            now=now,
+            reason="SCHEDULED_AUTO_OFF",
+            hard_cutoff_at=self._next_hard_cutoff_datetime(now),
+            dry_run=self.settings.dry_run,
+        )
         actuation = self.actuator.send_power("OFF", reason="SCHEDULED_AUTO_OFF")
         event_type = "OFF_TRIGGERED" if actuation.success else "OFF_FAILED"
         details = {
             "mode": actuation.mode,
             "detail": actuation.detail,
             "dry_run": self.settings.dry_run,
+            "notification": {
+                "attempted": notification.attempted,
+                "success": notification.success,
+                "detail": notification.detail,
+                "delay_seconds": notification.delay_seconds,
+                "planned_shutdown_at": notification.planned_shutdown_at,
+            },
             "quiet_window": {
                 "reason": quiet_window.reason,
                 "quiet_for_seconds": quiet_window.quiet_for_seconds,
