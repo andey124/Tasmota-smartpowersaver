@@ -124,7 +124,7 @@ Status legend:
 ## Phase 2a - Dry-run Scripts (MQTT + Threshold Discovery)
 
 ### P2A-01 MQTT connectivity and topic probe script
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Implement `scripts/mqtt_probe.py`.
   - Connect to broker (support anonymous mode by default).
@@ -134,7 +134,7 @@ Status legend:
   - Script confirms broker and topic wiring without changing plug state.
 
 ### P2A-02 Decision simulation dry-run controller
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Implement `scripts/mqtt_dry_run_controller.py`.
   - Reuse evaluation rules and emit simulated decisions only.
@@ -143,7 +143,7 @@ Status legend:
   - End-to-end simulation output for one evening behavior.
 
 ### P2A-03 Power recorder script
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Implement `scripts/record_power.py` writing CSV (`timestamp,power_watts`).
   - Add CLI args for duration, output file, and topic.
@@ -151,7 +151,7 @@ Status legend:
   - CSV data capture for at least one idle and one active session.
 
 ### P2A-04 Threshold analysis script
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Implement `scripts/analyze_thresholds.py`.
   - Compute quantiles and threshold proposals from recorded CSV.
@@ -160,7 +160,7 @@ Status legend:
   - Report with recommended `idle`, `active`, and confidence notes.
 
 ### P2A-05 Scripts documentation
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add `scripts/README.md` with examples and expected outputs.
   - Document anonymous vs authenticated MQTT usage.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `DONE`
 - Deliverable:
-  - Phase 2 activity-aware shutdown engine is implemented and exposed through inspection APIs.
+  - Phase 2 activity-aware shutdown engine and Phase 2a operator scripts are implemented.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`
