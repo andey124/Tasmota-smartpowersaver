@@ -65,6 +65,7 @@ The activity classifier uses:
 - `GET /health`
 - `GET /status`
 - `GET /decision`
+- `GET /metrics`
 - `POST /override/today`
 - `DELETE /override/today`
 - `POST /power/on`
@@ -78,6 +79,8 @@ When shutdown is postponed, the status payload includes `next_postponed_evaluati
 The status payload also includes `next_hard_cutoff` for the mandatory fallback shutdown.
 
 `GET /decision` returns the current thresholds, schedule, recent samples, activity state, quiet-window state, and the latest persisted decision event so you can see why shutdown was allowed or skipped.
+
+`GET /metrics` exposes Prometheus-style counters for evaluations, postpones, and automated shutdowns, plus gauges for override and postponed state.
 
 Postponed re-checks are now persisted in SQLite and restored on startup, so a container restart does not silently drop a pending evening evaluation.
 

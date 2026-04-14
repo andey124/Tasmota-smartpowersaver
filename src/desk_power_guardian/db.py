@@ -212,3 +212,24 @@ class Database:
         with self._lock:
             self._conn.execute("DELETE FROM service_state WHERE key = ?", (key,))
             self._conn.commit()
+
+    def count_events_by_type(self, event_types: list[str]) -> dict[str, int]:
+        if not event_types:
+            return {}
+        placeholders = ",".join("?" for _ in event_types)
+        with self._lock:
+            cur = self._conn.execute(
+                f"""
+                SELECT event_type, COUNT(*) AS total
+                FROM events
+                WHERE event_type IN ({placeholders})
+                GROUP BY event_type
+                """,
+                tuple(event_types),
+            )
+            rows = cur.fetchall()
+
+        counts = {event_type: 0 for event_type in event_types}
+        for row in rows:
+            counts[row["event_type"]] = row["total"]
+        return counts

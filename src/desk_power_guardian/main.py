@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 
 from .config import load_settings
 from .db import Database
@@ -52,6 +53,11 @@ def status() -> dict:
 @app.get("/decision")
 def decision() -> dict:
     return service.decision_context()
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> str:
+    return service.metrics_text()
 
 
 @app.post("/override/today")

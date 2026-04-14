@@ -186,7 +186,7 @@ Status legend:
   - Optional notification appears before automated shutdown.
 
 ### P3-03 Metrics exposure
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Expose counters/gauges for evaluations, postpones, and offs.
   - Add `/metrics` endpoint (Prometheus format).
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 3 hardening includes startup reconciliation and optional pre-shutdown webhook notification.
+  - Phase 3 hardening includes startup reconciliation, pre-shutdown webhook notification, and Prometheus metrics exposure.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

@@ -532,3 +532,8 @@ class GuardianService:
                 for event in events
             ],
         }
+
+    def metrics_text(self) -> str:
+        from .metrics import render_metrics
+
+        return render_metrics(self)
