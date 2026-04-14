@@ -24,6 +24,7 @@ class ActivityClassifierTests(unittest.TestCase):
             hard_cutoff_time=datetime(2026, 4, 15, 1, 0, 0).time(),
             active_watts_threshold=45.0,
             idle_watts_threshold=20.0,
+            quiet_minutes_required=20,
             telemetry_stale_seconds=900,
             mqtt_host="127.0.0.1",
             mqtt_port=1883,
@@ -75,6 +76,51 @@ class ActivityClassifierTests(unittest.TestCase):
         )
         self.assertEqual(result.state, "STALE")
         self.assertEqual(result.reason, "TELEMETRY_TOO_OLD")
+
+    def test_quiet_window_allows_off_after_continuous_idle(self) -> None:
+        result = self.classifier.assess_quiet_window(
+            [
+                Sample(created_at=self.now - timedelta(minutes=21), power_watts=10.0),
+                Sample(created_at=self.now - timedelta(minutes=10), power_watts=12.0),
+                Sample(created_at=self.now - timedelta(minutes=1), power_watts=15.0),
+            ],
+            now=self.now,
+        )
+        self.assertTrue(result.off_allowed)
+        self.assertEqual(result.reason, "QUIET_WINDOW_MET")
+
+    def test_quiet_window_blocks_recent_activity(self) -> None:
+        result = self.classifier.assess_quiet_window(
+            [
+                Sample(created_at=self.now - timedelta(minutes=25), power_watts=10.0),
+                Sample(created_at=self.now - timedelta(minutes=5), power_watts=55.0),
+                Sample(created_at=self.now - timedelta(minutes=1), power_watts=10.0),
+            ],
+            now=self.now,
+        )
+        self.assertFalse(result.off_allowed)
+        self.assertEqual(result.reason, "QUIET_WINDOW_NOT_MET")
+
+    def test_quiet_window_blocks_when_latest_sample_is_uncertain(self) -> None:
+        result = self.classifier.assess_quiet_window(
+            [
+                Sample(created_at=self.now - timedelta(minutes=3), power_watts=30.0),
+            ],
+            now=self.now,
+        )
+        self.assertFalse(result.off_allowed)
+        self.assertEqual(result.reason, "POWER_BETWEEN_IDLE_AND_ACTIVE_THRESHOLDS")
+
+    def test_quiet_window_breaks_on_large_gap(self) -> None:
+        result = self.classifier.assess_quiet_window(
+            [
+                Sample(created_at=self.now - timedelta(minutes=20), power_watts=10.0),
+                Sample(created_at=self.now - timedelta(minutes=1), power_watts=10.0),
+            ],
+            now=self.now,
+        )
+        self.assertFalse(result.off_allowed)
+        self.assertEqual(result.reason, "QUIET_WINDOW_NOT_MET")
 
 
 if __name__ == "__main__":

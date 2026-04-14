@@ -91,7 +91,7 @@ Status legend:
   - Deterministic classifier with unit tests for boundary conditions.
 
 ### P2-03 Quiet-window decision logic
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Require `QUIET_MINUTES_REQUIRED` continuous idle before OFF.
   - Evaluate state at scheduled check times.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 2 telemetry collection and activity classification are implemented; quiet-window logic remains pending.
+  - Phase 2 telemetry collection, activity classification, and quiet-window gating are implemented; postpone logic remains pending.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

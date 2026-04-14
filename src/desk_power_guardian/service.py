@@ -89,8 +89,29 @@ class GuardianService:
     def evaluate_and_maybe_turn_off(self) -> EvaluationResult:
         now = self._now()
         date_local = now.date().isoformat()
+        quiet_window = self.activity.assess_quiet_window(
+            self.telemetry.recent_samples(limit=self.settings.telemetry_window_size),
+            now=now,
+        )
 
-        self.log_event("EVALUATION", {"date_local": date_local, "time": now.time().isoformat()})
+        self.log_event(
+            "EVALUATION",
+            {
+                "date_local": date_local,
+                "time": now.time().isoformat(),
+                "quiet_window": {
+                    "off_allowed": quiet_window.off_allowed,
+                    "reason": quiet_window.reason,
+                    "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                    "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                    "latest_state": quiet_window.latest_state,
+                    "latest_power_watts": quiet_window.latest_power_watts,
+                    "latest_sample_time": quiet_window.latest_sample_time,
+                    "idle_since": quiet_window.idle_since,
+                    "considered_samples": quiet_window.considered_samples,
+                },
+            },
+        )
 
         if self.db.has_override(date_local):
             result = EvaluationResult(
@@ -101,12 +122,43 @@ class GuardianService:
             self.log_event("OVERRIDE_ACTIVE", result.details)
             return result
 
+        if not quiet_window.off_allowed:
+            details = {
+                "date_local": date_local,
+                "quiet_window": {
+                    "reason": quiet_window.reason,
+                    "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                    "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                    "latest_state": quiet_window.latest_state,
+                    "latest_power_watts": quiet_window.latest_power_watts,
+                    "latest_sample_time": quiet_window.latest_sample_time,
+                    "idle_since": quiet_window.idle_since,
+                    "considered_samples": quiet_window.considered_samples,
+                },
+            }
+            self.log_event("OFF_SKIPPED", details)
+            return EvaluationResult(
+                action="SKIP",
+                reason=quiet_window.reason,
+                details=details,
+            )
+
         actuation = self.actuator.send_power("OFF", reason="SCHEDULED_AUTO_OFF")
         event_type = "OFF_TRIGGERED" if actuation.success else "OFF_FAILED"
         details = {
             "mode": actuation.mode,
             "detail": actuation.detail,
             "dry_run": self.settings.dry_run,
+            "quiet_window": {
+                "reason": quiet_window.reason,
+                "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                "latest_state": quiet_window.latest_state,
+                "latest_power_watts": quiet_window.latest_power_watts,
+                "latest_sample_time": quiet_window.latest_sample_time,
+                "idle_since": quiet_window.idle_since,
+                "considered_samples": quiet_window.considered_samples,
+            },
         }
         self.log_event(event_type, details)
 
@@ -149,7 +201,11 @@ class GuardianService:
 
         today_key = self._today_key()
         events = self.db.list_recent_events(limit=10)
-        activity = self.activity.assess_latest(self.telemetry.latest_sample(), now=self._now())
+        now = self._now()
+        telemetry_window = self.telemetry.recent_samples(limit=self.settings.telemetry_window_size)
+        recent_samples = telemetry_window[-10:]
+        activity = self.activity.assess_latest(self.telemetry.latest_sample(), now=now)
+        quiet_window = self.activity.assess_quiet_window(telemetry_window, now=now)
 
         return {
             "service": "desk-power-guardian",
@@ -171,13 +227,24 @@ class GuardianService:
                     "sample_age_seconds": activity.sample_age_seconds,
                     "sample_time": activity.sample_time,
                 },
+                "quiet_window": {
+                    "off_allowed": quiet_window.off_allowed,
+                    "reason": quiet_window.reason,
+                    "quiet_for_seconds": quiet_window.quiet_for_seconds,
+                    "quiet_minutes_required": quiet_window.quiet_minutes_required,
+                    "latest_state": quiet_window.latest_state,
+                    "latest_power_watts": quiet_window.latest_power_watts,
+                    "latest_sample_time": quiet_window.latest_sample_time,
+                    "idle_since": quiet_window.idle_since,
+                    "considered_samples": quiet_window.considered_samples,
+                },
                 "recent_samples": [
                     {
                         "created_at": sample.created_at.isoformat(),
                         "topic": sample.topic,
                         "power_watts": sample.power_watts,
                     }
-                    for sample in self.telemetry.recent_samples(limit=10)
+                    for sample in recent_samples
                 ],
             },
             "today": today_key,

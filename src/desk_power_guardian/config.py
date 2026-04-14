@@ -47,6 +47,7 @@ class Settings:
     hard_cutoff_time: time
     active_watts_threshold: float
     idle_watts_threshold: float
+    quiet_minutes_required: int
     telemetry_stale_seconds: int
     mqtt_host: str
     mqtt_port: int
@@ -83,6 +84,7 @@ def load_settings() -> Settings:
     hard_cutoff_time = _parse_time(_env("HARD_CUTOFF_TIME", "01:00") or "01:00", "HARD_CUTOFF_TIME")
     active_watts_threshold = float(_env("ACTIVE_WATTS_THRESHOLD", "45") or "45")
     idle_watts_threshold = float(_env("IDLE_WATTS_THRESHOLD", "20") or "20")
+    quiet_minutes_required = int(_env("QUIET_MINUTES_REQUIRED", "20") or "20")
     telemetry_stale_seconds = int(_env("TELEMETRY_STALE_SECONDS", "900") or "900")
     mqtt_host = _env("MQTT_HOST", "127.0.0.1") or "127.0.0.1"
     mqtt_port = int(_env("MQTT_PORT", "1883") or "1883")
@@ -109,6 +111,7 @@ def load_settings() -> Settings:
         hard_cutoff_time=hard_cutoff_time,
         active_watts_threshold=active_watts_threshold,
         idle_watts_threshold=idle_watts_threshold,
+        quiet_minutes_required=quiet_minutes_required,
         telemetry_stale_seconds=telemetry_stale_seconds,
         mqtt_host=mqtt_host,
         mqtt_port=mqtt_port,
