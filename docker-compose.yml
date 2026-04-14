@@ -1,0 +1,13 @@
+﻿services:
+  desk-power-guardian:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: desk-power-guardian
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data

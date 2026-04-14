@@ -9,7 +9,7 @@ Status legend:
 ## Phase 1 - MVP Manual Override + Scheduled Off
 
 ### P1-01 Service scaffold and runtime layout
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Create Python package layout for `desk-power-guardian`.
   - Add config loading from env and typed settings object.
@@ -19,7 +19,7 @@ Status legend:
   - Repository structure documented in `README.md`.
 
 ### P1-02 Docker packaging and compose service
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add `Dockerfile` and `.dockerignore`.
   - Add `docker-compose.yml` service with persistent volume for SQLite and restart policy.
@@ -29,7 +29,7 @@ Status legend:
   - Container restarts automatically (`unless-stopped`).
 
 ### P1-03 Tasmota actuator (MQTT first)
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Build command publisher abstraction for `POWER ON` / `POWER OFF`.
   - Implement MQTT publish path using configured Tasmota topic mapping.
@@ -38,7 +38,7 @@ Status legend:
   - Unit-tested actuator module with dry-run mode logging target topic/payload.
 
 ### P1-04 Scheduler with daily evaluation and reset
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Schedule `AUTO_OFF_TIME` daily evaluation.
   - Schedule daily override reset at local midnight.
@@ -47,7 +47,7 @@ Status legend:
   - Scheduler emits expected events in logs for both jobs.
 
 ### P1-05 Override persistence and API endpoints
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add SQLite schema for one-time daily override.
   - Implement `POST /override/today` and `DELETE /override/today`.
@@ -56,7 +56,7 @@ Status legend:
   - Override survives service restart and resets next day.
 
 ### P1-06 Structured event logging and baseline events table
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Define event types and event logger helper.
   - Persist decision events to SQLite (`events` table).
@@ -65,7 +65,7 @@ Status legend:
   - `events` table contains inspectable decision history with timestamps and reasons.
 
 ### P1-07 Dry-run behavior guardrail
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Add config flag to prevent any real power command.
   - Ensure code path still records "would have acted" decisions.
