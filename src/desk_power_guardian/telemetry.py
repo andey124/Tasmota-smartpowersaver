@@ -23,6 +23,56 @@ class TelemetrySample:
     payload: dict
 
 
+def parse_telemetry_message(
+    topic: str,
+    raw_payload: bytes,
+    settings: Settings,
+    now_provider: Callable[[], datetime],
+) -> TelemetrySample | None:
+    try:
+        payload = json.loads(raw_payload.decode("utf-8"))
+    except Exception:
+        LOGGER.debug("ignoring telemetry message with invalid JSON topic=%s", topic)
+        return None
+
+    energy = payload.get("ENERGY")
+    if not isinstance(energy, dict):
+        LOGGER.debug("ignoring telemetry message without ENERGY payload topic=%s", topic)
+        return None
+
+    power_value = energy.get("Power")
+    if power_value is None:
+        LOGGER.debug("ignoring telemetry message without ENERGY.Power topic=%s", topic)
+        return None
+
+    try:
+        power_watts = float(power_value)
+    except (TypeError, ValueError):
+        LOGGER.debug("ignoring telemetry message with invalid power value topic=%s", topic)
+        return None
+
+    created_at = _extract_timestamp(payload, settings, now_provider)
+    return TelemetrySample(
+        created_at=created_at,
+        topic=topic,
+        power_watts=power_watts,
+        payload=payload,
+    )
+
+
+def _extract_timestamp(payload: dict, settings: Settings, now_provider: Callable[[], datetime]) -> datetime:
+    payload_time = payload.get("Time")
+    if isinstance(payload_time, str):
+        try:
+            parsed = datetime.fromisoformat(payload_time)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=settings.timezone)
+            return parsed
+        except ValueError:
+            LOGGER.debug("telemetry payload time was not ISO formatted: %s", payload_time)
+    return now_provider()
+
+
 class TelemetryCollector:
     def __init__(self, settings: Settings, db: Database, now_provider: Callable[[], datetime]) -> None:
         self._settings = settings
@@ -107,44 +157,4 @@ class TelemetryCollector:
             )
 
     def _parse_message(self, topic: str, raw_payload: bytes) -> TelemetrySample | None:
-        try:
-            payload = json.loads(raw_payload.decode("utf-8"))
-        except Exception:
-            LOGGER.debug("ignoring telemetry message with invalid JSON topic=%s", topic)
-            return None
-
-        energy = payload.get("ENERGY")
-        if not isinstance(energy, dict):
-            LOGGER.debug("ignoring telemetry message without ENERGY payload topic=%s", topic)
-            return None
-
-        power_value = energy.get("Power")
-        if power_value is None:
-            LOGGER.debug("ignoring telemetry message without ENERGY.Power topic=%s", topic)
-            return None
-
-        try:
-            power_watts = float(power_value)
-        except (TypeError, ValueError):
-            LOGGER.debug("ignoring telemetry message with invalid power value topic=%s", topic)
-            return None
-
-        created_at = self._extract_timestamp(payload)
-        return TelemetrySample(
-            created_at=created_at,
-            topic=topic,
-            power_watts=power_watts,
-            payload=payload,
-        )
-
-    def _extract_timestamp(self, payload: dict) -> datetime:
-        payload_time = payload.get("Time")
-        if isinstance(payload_time, str):
-            try:
-                parsed = datetime.fromisoformat(payload_time)
-                if parsed.tzinfo is None:
-                    return parsed.replace(tzinfo=self._settings.timezone)
-                return parsed
-            except ValueError:
-                LOGGER.debug("telemetry payload time was not ISO formatted: %s", payload_time)
-        return self._now_provider()
+        return parse_telemetry_message(topic, raw_payload, self._settings, self._now_provider)

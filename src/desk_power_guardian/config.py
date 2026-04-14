@@ -3,7 +3,11 @@
 import os
 from dataclasses import dataclass
 from datetime import time
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+
+_DOTENV_CACHE: dict[str, str] | None = None
 
 
 def _clean_env(value: str | None) -> str | None:
@@ -20,7 +24,34 @@ def _env(name: str, default: str | None = None) -> str | None:
     cleaned = _clean_env(raw)
     if cleaned is not None:
         return cleaned
+    dotenv_value = _dotenv().get(name)
+    cleaned_dotenv = _clean_env(dotenv_value)
+    if cleaned_dotenv is not None:
+        return cleaned_dotenv
     return default
+
+
+def _dotenv() -> dict[str, str]:
+    global _DOTENV_CACHE
+    if _DOTENV_CACHE is not None:
+        return _DOTENV_CACHE
+
+    env_path = Path.cwd() / ".env"
+    values: dict[str, str] = {}
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped.startswith("export "):
+                stripped = stripped[len("export ") :]
+            if "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            values[key.strip()] = value.strip()
+
+    _DOTENV_CACHE = values
+    return values
 
 
 def _to_bool(value: str | None, default: bool) -> bool:
@@ -57,6 +88,7 @@ class Settings:
     mqtt_password: str | None
     tasmota_base_topic: str
     tasmota_command_prefix: str
+    tasmota_status_prefix: str
     telemetry_topic_prefix: str
     telemetry_sensor_suffix: str
     telemetry_window_size: int
@@ -75,6 +107,14 @@ class Settings:
     @property
     def telemetry_topic(self) -> str:
         return f"{self.telemetry_topic_prefix}/{self.tasmota_base_topic}/{self.telemetry_sensor_suffix}"
+
+    @property
+    def telemetry_wildcard_topic(self) -> str:
+        return f"{self.telemetry_topic_prefix}/{self.tasmota_base_topic}/#"
+
+    @property
+    def status_wildcard_topic(self) -> str:
+        return f"{self.tasmota_status_prefix}/{self.tasmota_base_topic}/#"
 
 
 def load_settings() -> Settings:
@@ -95,6 +135,7 @@ def load_settings() -> Settings:
     mqtt_password = _env("MQTT_PASSWORD")
     tasmota_base_topic = _env("TASMOTA_BASE_TOPIC", "tasmota_1C8D21") or "tasmota_1C8D21"
     tasmota_command_prefix = _env("TASMOTA_COMMAND_PREFIX", "cmnd") or "cmnd"
+    tasmota_status_prefix = _env("TASMOTA_STATUS_PREFIX", "stat") or "stat"
     telemetry_topic_prefix = _env("TELEMETRY_TOPIC_PREFIX", "tele") or "tele"
     telemetry_sensor_suffix = _env("TELEMETRY_SENSOR_SUFFIX", "SENSOR") or "SENSOR"
     telemetry_window_size = int(_env("TELEMETRY_WINDOW_SIZE", "120") or "120")
@@ -123,6 +164,7 @@ def load_settings() -> Settings:
         mqtt_password=mqtt_password,
         tasmota_base_topic=tasmota_base_topic,
         tasmota_command_prefix=tasmota_command_prefix,
+        tasmota_status_prefix=tasmota_status_prefix,
         telemetry_topic_prefix=telemetry_topic_prefix,
         telemetry_sensor_suffix=telemetry_sensor_suffix,
         telemetry_window_size=telemetry_window_size,
