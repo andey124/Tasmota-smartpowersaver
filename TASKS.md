@@ -83,7 +83,7 @@ Status legend:
   - Collector continuously stores timestamped power values from MQTT.
 
 ### P2-02 Activity classifier (idle vs active)
-- Status: `TODO`
+- Status: `DONE`
 - Scope:
   - Implement threshold-based classification using `IDLE_WATTS_THRESHOLD` and `ACTIVE_WATTS_THRESHOLD`.
   - Handle missing/late telemetry gracefully.
@@ -213,7 +213,7 @@ Status legend:
 ### Current milestone
 - Status: `IN_PROGRESS`
 - Deliverable:
-  - Phase 2 telemetry collection checkpoint implemented; classifier and quiet-window logic remain pending.
+  - Phase 2 telemetry collection and activity classification are implemented; quiet-window logic remains pending.
 
 ### Implementation rule for commits
 - Status: `IN_PROGRESS`

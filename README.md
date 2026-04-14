@@ -54,6 +54,11 @@ You can tune retention with:
 - `TELEMETRY_WINDOW_SIZE` for the in-memory rolling window
 - `TELEMETRY_DB_RETENTION` for recent SQLite-backed samples (`0` disables DB retention)
 
+The activity classifier uses:
+- `ACTIVE_WATTS_THRESHOLD` to mark usage as active
+- `IDLE_WATTS_THRESHOLD` to mark usage as idle
+- `TELEMETRY_STALE_SECONDS` to treat delayed telemetry as unusable
+
 ## API
 - `GET /health`
 - `GET /status`
@@ -64,3 +69,4 @@ You can tune retention with:
 - `POST /evaluate-now`
 
 `GET /status` now includes recent power telemetry samples when available.
+It also reports the current activity assessment as `ACTIVE`, `IDLE`, `UNCERTAIN`, `NO_DATA`, or `STALE`.

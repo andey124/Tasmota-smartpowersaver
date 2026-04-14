@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from .actuator import TasmotaActuator
+from .activity import ActivityClassifier
 from .config import Settings
 from .db import Database
 from .telemetry import TelemetryCollector
@@ -27,6 +28,7 @@ class GuardianService:
         self.settings = settings
         self.db = db
         self.actuator = TasmotaActuator(settings)
+        self.activity = ActivityClassifier(settings)
         self.telemetry = TelemetryCollector(settings=settings, db=db, now_provider=self._now)
         self.scheduler = AsyncIOScheduler(timezone=settings.timezone)
 
@@ -147,6 +149,7 @@ class GuardianService:
 
         today_key = self._today_key()
         events = self.db.list_recent_events(limit=10)
+        activity = self.activity.assess_latest(self.telemetry.latest_sample(), now=self._now())
 
         return {
             "service": "desk-power-guardian",
@@ -161,6 +164,13 @@ class GuardianService:
             },
             "telemetry": {
                 **self.telemetry.status(),
+                "activity": {
+                    "state": activity.state,
+                    "reason": activity.reason,
+                    "power_watts": activity.power_watts,
+                    "sample_age_seconds": activity.sample_age_seconds,
+                    "sample_time": activity.sample_time,
+                },
                 "recent_samples": [
                     {
                         "created_at": sample.created_at.isoformat(),

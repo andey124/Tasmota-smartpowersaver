@@ -45,6 +45,9 @@ class Settings:
     auto_off_time: time
     reset_time: time
     hard_cutoff_time: time
+    active_watts_threshold: float
+    idle_watts_threshold: float
+    telemetry_stale_seconds: int
     mqtt_host: str
     mqtt_port: int
     mqtt_allow_anonymous: bool
@@ -78,6 +81,9 @@ def load_settings() -> Settings:
     auto_off_time = _parse_time(_env("AUTO_OFF_TIME", "20:00") or "20:00", "AUTO_OFF_TIME")
     reset_time = _parse_time(_env("OVERRIDE_RESET_TIME", "00:05") or "00:05", "OVERRIDE_RESET_TIME")
     hard_cutoff_time = _parse_time(_env("HARD_CUTOFF_TIME", "01:00") or "01:00", "HARD_CUTOFF_TIME")
+    active_watts_threshold = float(_env("ACTIVE_WATTS_THRESHOLD", "45") or "45")
+    idle_watts_threshold = float(_env("IDLE_WATTS_THRESHOLD", "20") or "20")
+    telemetry_stale_seconds = int(_env("TELEMETRY_STALE_SECONDS", "900") or "900")
     mqtt_host = _env("MQTT_HOST", "127.0.0.1") or "127.0.0.1"
     mqtt_port = int(_env("MQTT_PORT", "1883") or "1883")
     mqtt_allow_anonymous = _to_bool(_env("MQTT_ALLOW_ANONYMOUS", "true"), default=True)
@@ -92,12 +98,18 @@ def load_settings() -> Settings:
     http_fallback_url = _env("HTTP_FALLBACK_URL")
     sqlite_path = _env("SQLITE_PATH", "data/desk_power_guardian.db") or "data/desk_power_guardian.db"
 
+    if idle_watts_threshold > active_watts_threshold:
+        raise ValueError("IDLE_WATTS_THRESHOLD must be less than or equal to ACTIVE_WATTS_THRESHOLD")
+
     return Settings(
         tz=tz,
         dry_run=dry_run,
         auto_off_time=auto_off_time,
         reset_time=reset_time,
         hard_cutoff_time=hard_cutoff_time,
+        active_watts_threshold=active_watts_threshold,
+        idle_watts_threshold=idle_watts_threshold,
+        telemetry_stale_seconds=telemetry_stale_seconds,
         mqtt_host=mqtt_host,
         mqtt_port=mqtt_port,
         mqtt_allow_anonymous=mqtt_allow_anonymous,
